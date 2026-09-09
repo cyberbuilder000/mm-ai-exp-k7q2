@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/>
+<meta name="robots" content="noindex,nofollow,noarchive"/>
+<title>AI/dev compute expense - validation</title>
+<style>
+:root { --bg:#0f1115; --card:#1a1f27; --text:#e8eaed; --muted:#9aa0a6; --work:#4c8bf5; --personal:#34a853; --private:#8ab4f8; --line:#2a3140; }
+body { margin:0; font-family: ui-sans-serif, system-ui, sans-serif; background:var(--bg); color:var(--text); }
+main { max-width:960px; margin:0 auto; padding:24px 16px 64px; }
+h1 { font-size:1.35rem; margin:0 0 4px; }
+.sub { color:var(--muted); margin:0 0 20px; font-size:0.92rem; }
+.grid { display:grid; gap:12px; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); }
+.card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:14px 16px; }
+.k { color:var(--muted); font-size:0.78rem; text-transform:uppercase; letter-spacing:.04em; }
+.v { font-size:1.45rem; font-weight:650; margin-top:4px; }
+.bar { height:10px; background:#0b0d11; border-radius:999px; overflow:hidden; display:flex; margin-top:10px; }
+.seg { height:100%; }
+.row { display:flex; justify-content:space-between; gap:8px; padding:8px 0; border-bottom:1px solid var(--line); font-size:0.95rem; }
+.row:last-child { border-bottom:0; }
+.badge { display:inline-block; padding:2px 8px; border-radius:999px; background:#243044; color:#a8c7fa; font-size:0.75rem; }
+.ok { color:#81c995; } .warn { color:#fdd663; }
+table { width:100%; border-collapse:collapse; font-size:0.88rem; }
+th,td { text-align:left; padding:8px 6px; border-bottom:1px solid var(--line); vertical-align:top; }
+th { color:var(--muted); font-weight:560; }
+.foot { margin-top:18px; color:var(--muted); font-size:0.8rem; line-height:1.45; }
+label { display:block; font-size:0.8rem; color:var(--muted); margin-bottom:4px; }
+input[type=date] { background:#0b0d11; color:var(--text); border:1px solid var(--line); border-radius:8px; padding:8px 10px; width:100%; box-sizing:border-box; }
+.actions { display:flex; flex-wrap:wrap; gap:10px; align-items:end; margin-top:12px; }
+.field { flex:1; min-width:140px; }
+button { background:var(--work); color:#fff; border:0; border-radius:8px; padding:10px 14px; font-weight:600; cursor:pointer; }
+button.secondary { background:#2a3140; }
+#invoiceSheet { position:absolute; left:-10000px; top:0; width:800px; }
+@media print {
+  body * { visibility:hidden; }
+  #invoiceSheet, #invoiceSheet * { visibility:visible; }
+  #invoiceSheet { position:absolute; left:0; top:0; width:100%; background:#fff; color:#111; padding:24px; }
+  #invoiceSheet table { width:100%; border-collapse:collapse; }
+  #invoiceSheet th,#invoiceSheet td { border-bottom:1px solid #ccc; padding:6px; text-align:left; }
+}
+</style></head><body><main>
+<h1>AI / dev compute expense tracker</h1>
+<p class="sub">Month 2026-09 · accrued 9 day(s) · active subs now $316.00/mo · rebuilt 2026-09-09T10:46:27.439808-05:00</p>
+<div class="grid">
+  <div class="card"><div class="k">Gross MTD</div><div class="v">$94.80</div></div>
+  <div class="card"><div class="k">Reimbursable (Work)</div><div class="v">$73.94</div><div class="badge">expensible</div></div>
+  <div class="card"><div class="k">Employee-retained</div><div class="v">$20.86</div></div>
+  <div class="card"><div class="k">On-demand MTD</div><div class="v">$0.00</div></div>
+</div>
+<div class="card" style="margin-top:12px">
+  <div class="k">Category mix</div>
+  <div class="bar">
+    <div class="seg" style="width:78.0%;background:var(--work)"></div>
+    <div class="seg" style="width:15.0%;background:var(--personal)"></div>
+    <div class="seg" style="width:7.000000000000001%;background:var(--private)"></div>
+  </div>
+  <div class="row"><span>Work (Allied productivity) (78%)</span><span>$73.94</span></div>
+  <div class="row"><span>Personal / COS / family (15%)</span><span>$14.22</span></div>
+  <div class="row"><span>Private (redacted) (7%)</span><span>$6.64</span></div>
+</div>
+<div class="card" style="margin-top:12px">
+  <div class="k">Invoice period + PDF</div>
+  <div class="actions">
+    <div class="field"><label for="startDate">Start date</label><input id="startDate" type="date" value="2026-09-01"/></div>
+    <div class="field"><label for="endDate">End date</label><input id="endDate" type="date" value="2026-09-30"/></div>
+    <button type="button" id="btnPdf">Generate PDF invoice</button>
+    <button type="button" class="secondary" id="btnReset">Reset to this month</button>
+  </div>
+  <p class="sub" style="margin:10px 0 0">Defaults = first/last day of the current month. Downloads a PDF for the selected range and opens print (Save as PDF) when the browser allows it.</p>
+  <div id="rangePreview" class="row" style="margin-top:8px"><span>Selected Work reimbursable</span><span id="rangeWork">-</span></div>
+</div>
+<div class="card" style="margin-top:12px">
+  <div class="k">Platforms in scope (rate as of today)</div>
+  <table><thead><tr><th>Platform</th><th>Kind</th><th>Rate</th><th>Effective</th><th>Note</th></tr></thead>
+  <tbody><tr><td>SuperGrok Heavy (Grok Bot)</td><td>ai_runtime</td><td>$300.00/mo</td><td>2026-09-01</td><td>Baseline Heavy covering Grok Bot</td></tr><tr><td>Cursor Pro</td><td>dev_ide</td><td>$16.00/mo</td><td>2026-09-01</td><td>Yearly amortized ~$16/mo as of 2026-09-06</td></tr><tr><td>GitHub (cyberbuilder000)</td><td>dev_scm</td><td>$0.00/mo</td><td>2026-09-01</td><td>Confirm Free vs Pro/Team; set monthly when known</td></tr><tr><td>Vercel</td><td>dev_hosting</td><td>$0.00/mo</td><td>2026-09-01</td><td>HITL free-tier staging; update if Pro</td></tr><tr><td>Clerk</td><td>dev_auth</td><td>$0.00/mo</td><td>2026-09-01</td><td>HITL free-tier; update if paid</td></tr><tr><td>Neon</td><td>dev_db</td><td>$0.00/mo</td><td>2026-09-01</td><td>HITL free-tier; update if paid</td></tr><tr><td>AgentMail</td><td>ai_comms</td><td>$0.00/mo</td><td>2026-09-01</td><td>Free tier; Darcy ops inbox</td></tr></tbody></table>
+</div>
+<div class="card" style="margin-top:12px">
+  <div class="k">Validation</div>
+  <table><thead><tr><th>Field</th><th>Last observed</th><th>Check</th></tr></thead><tbody>
+  <tr><td>Weekly usage %</td><td>89.0</td><td class="warn">High burn - thrift</td></tr>
+  <tr><td>On-demand spent / cap</td><td>0.0 / 50.0</td><td class="ok">Folded into daily accrual when &gt; 0</td></tr>
+  <tr><td>Last validation</td><td colspan="2">2026-09-09T10:40:38.233572+00:00</td></tr>
+  </tbody></table>
+</div>
+<p class="foot">Allocate active platform subscription costs by estimated compute/dev share (Work / Personal / Private). On-demand added when observed. Subscription changes are versioned with effective dates.<br/>Medical category title is redacted on this dashboard and on invoices.</p>
+</main>
+<section id="invoiceSheet" aria-hidden="true"></section>
+<script>
+const DATA = {"config": {"shares": {"work": 0.78, "personal": 0.15, "medical": 0.07}, "share_labels": {"work": "Work (Allied productivity)", "personal": "Personal / COS / family", "medical": "Private (redacted)"}, "billTo": "Allied Buildings / Allied Advanced Systems", "payee": "Michael Mellor", "platforms": [{"id": "supergrok_heavy", "label": "SuperGrok Heavy (Grok Bot)", "category": "ai_runtime", "monthly": 300.0, "effective": "2026-09-01", "note": "Baseline Heavy covering Grok Bot", "work_default": true}, {"id": "cursor_pro", "label": "Cursor Pro", "category": "dev_ide", "monthly": 16.0, "effective": "2026-09-01", "note": "Yearly amortized ~$16/mo as of 2026-09-06", "work_default": true}, {"id": "github", "label": "GitHub (cyberbuilder000)", "category": "dev_scm", "monthly": 0.0, "effective": "2026-09-01", "note": "Confirm Free vs Pro/Team; set monthly when known", "work_default": true}, {"id": "vercel", "label": "Vercel", "category": "dev_hosting", "monthly": 0.0, "effective": "2026-09-01", "note": "HITL free-tier staging; update if Pro", "work_default": true}, {"id": "clerk", "label": "Clerk", "category": "dev_auth", "monthly": 0.0, "effective": "2026-09-01", "note": "HITL free-tier; update if paid", "work_default": true}, {"id": "neon", "label": "Neon", "category": "dev_db", "monthly": 0.0, "effective": "2026-09-01", "note": "HITL free-tier; update if paid", "work_default": true}, {"id": "agentmail", "label": "AgentMail", "category": "ai_comms", "monthly": 0.0, "effective": "2026-09-01", "note": "Free tier; Darcy ops inbox", "work_default": false}], "subscriptions_monthly_now": 316.0}, "accruals": [{"date": "2026-09-01", "gross": 10.5333, "alloc": {"work": 8.216, "personal": 1.58, "medical": 0.7373}}, {"date": "2026-09-02", "gross": 10.5333, "alloc": {"work": 8.216, "personal": 1.58, "medical": 0.7373}}, {"date": "2026-09-03", "gross": 10.5333, "alloc": {"work": 8.216, "personal": 1.58, "medical": 0.7373}}, {"date": "2026-09-04", "gross": 10.5333, "alloc": {"work": 8.216, "personal": 1.58, "medical": 0.7373}}, {"date": "2026-09-05", "gross": 10.5333, "alloc": {"work": 8.216, "personal": 1.58, "medical": 0.7373}}, {"date": "2026-09-06", "gross": 10.5333, "alloc": {"work": 8.216, "personal": 1.58, "medical": 0.7373}}, {"date": "2026-09-07", "gross": 10.5333, "alloc": {"work": 8.216, "personal": 1.58, "medical": 0.7373}}, {"date": "2026-09-08", "gross": 10.5333, "alloc": {"work": 8.216, "personal": 1.58, "medical": 0.7373}}, {"date": "2026-09-09", "gross": 10.5333, "alloc": {"work": 8.216, "personal": 1.58, "medical": 0.7373}}], "defaults": {"start": "2026-09-01", "end": "2026-09-30"}, "summary": {"start": "2026-09-01", "end": "2026-09-30", "days": 9, "totals": {"gross": 94.8, "work": 73.94, "personal": 14.22, "medical": 6.64}, "reimbursable": 73.94, "retained": 20.86, "shares": {"work": 0.78, "personal": 0.15, "medical": 0.07}, "share_labels": {"work": "Work (Allied productivity)", "personal": "Personal / COS / family", "medical": "Private (redacted)"}, "subscriptions_monthly_now": 316.0, "platforms_now": [{"id": "supergrok_heavy", "label": "SuperGrok Heavy (Grok Bot)", "category": "ai_runtime", "monthly": 300.0, "effective": "2026-09-01", "note": "Baseline Heavy covering Grok Bot", "work_default": true}, {"id": "cursor_pro", "label": "Cursor Pro", "category": "dev_ide", "monthly": 16.0, "effective": "2026-09-01", "note": "Yearly amortized ~$16/mo as of 2026-09-06", "work_default": true}, {"id": "github", "label": "GitHub (cyberbuilder000)", "category": "dev_scm", "monthly": 0.0, "effective": "2026-09-01", "note": "Confirm Free vs Pro/Team; set monthly when known", "work_default": true}, {"id": "vercel", "label": "Vercel", "category": "dev_hosting", "monthly": 0.0, "effective": "2026-09-01", "note": "HITL free-tier staging; update if Pro", "work_default": true}, {"id": "clerk", "label": "Clerk", "category": "dev_auth", "monthly": 0.0, "effective": "2026-09-01", "note": "HITL free-tier; update if paid", "work_default": true}, {"id": "neon", "label": "Neon", "category": "dev_db", "monthly": 0.0, "effective": "2026-09-01", "note": "HITL free-tier; update if paid", "work_default": true}, {"id": "agentmail", "label": "AgentMail", "category": "ai_comms", "monthly": 0.0, "effective": "2026-09-01", "note": "Free tier; Darcy ops inbox", "work_default": false}], "ondemand_mtd": 0.0, "billTo": "Allied Buildings / Allied Advanced Systems", "payee": "Michael Mellor", "updatedAt": "2026-09-09T10:46:27.439808-05:00", "month": "2026-09", "days_accrued": 9, "last_usage": {"recordedAt": "2026-09-09T10:40:38.233572+00:00", "localDate": "2026-09-09", "weekly_pct": 89.0, "ondemand_spent": 0.0, "ondemand_cap": 50.0, "note": "Screenshot 2026-09-09 ~5:33am CT"}}};
+function parseISO(s) { return new Date(s + 'T00:00:00'); }
+function fmtMoney(n) { return '$' + (Math.round(n*100)/100).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2}); }
+function summarizeRange(startStr, endStr) {
+  let start = parseISO(startStr), end = parseISO(endStr);
+  if (end < start) { const t=start; start=end; end=t; }
+  const totals = {gross:0, work:0, personal:0, medical:0};
+  let days = 0;
+  for (const row of DATA.accruals) {
+    const d = parseISO(row.date);
+    if (d < start || d > end) continue;
+    days += 1;
+    totals.gross += row.gross;
+    totals.work += row.alloc.work || 0;
+    totals.personal += row.alloc.personal || 0;
+    totals.medical += row.alloc.medical || 0;
+  }
+  return { start: startStr, end: endStr, days, totals, reimbursable: totals.work, retained: totals.personal + totals.medical };
+}
+function updatePreview() {
+  const s = document.getElementById('startDate').value;
+  const e = document.getElementById('endDate').value;
+  const r = summarizeRange(s, e);
+  document.getElementById('rangeWork').textContent = fmtMoney(r.reimbursable) + ' (' + r.days + ' days)';
+  return r;
+}
+function invoiceId(r) {
+  return 'MM-AI-' + r.start.replace(/-/g,'') + '-' + r.end.replace(/-/g,'');
+}
+function buildInvoiceHtml(r) {
+  const c = DATA.config;
+  const labels = c.share_labels;
+  const plats = (c.platforms || []).map(p => '<tr><td>'+p.label+'</td><td>'+fmtMoney(p.monthly)+'/mo</td><td>'+(p.note || '')+'</td></tr>').join('');
+  const invId = invoiceId(r);
+  return (
+    '<h1 style="margin:0 0 8px;font-size:20px">Expense reimbursement invoice</h1>' +
+    '<p style="margin:0 0 12px;font-size:12px;color:#444">AI/dev productivity compute</p>' +
+    '<p><b>Invoice #:</b> '+invId+'<br/>' +
+    '<b>Period:</b> '+r.start+' to '+r.end+' ('+r.days+' days)<br/>' +
+    '<b>From:</b> '+c.payee+'<br/>' +
+    '<b>Bill to:</b> '+c.billTo+'<br/>' +
+    '<b>Pay to:</b> '+c.payee+'</p>' +
+    '<h2 style="font-size:14px">Platforms</h2>' +
+    '<table><thead><tr><th>Platform</th><th>Rate</th><th>Note</th></tr></thead><tbody>'+plats+'</tbody></table>' +
+    '<h2 style="font-size:14px">Allocation</h2>' +
+    '<table><thead><tr><th>Category</th><th>Share</th><th>Amount</th><th>Expensable</th></tr></thead><tbody>' +
+      '<tr><td>'+labels.work+'</td><td>'+(c.shares.work*100).toFixed(0)+'%</td><td>'+fmtMoney(r.totals.work)+'</td><td>Yes</td></tr>' +
+      '<tr><td>'+labels.personal+'</td><td>'+(c.shares.personal*100).toFixed(0)+'%</td><td>'+fmtMoney(r.totals.personal)+'</td><td>No</td></tr>' +
+      '<tr><td>'+labels.medical+'</td><td>'+(c.shares.medical*100).toFixed(0)+'%</td><td>'+fmtMoney(r.totals.medical)+'</td><td>No</td></tr>' +
+      '<tr><td><b>Total</b></td><td>100%</td><td><b>'+fmtMoney(r.totals.gross)+'</b></td><td></td></tr>' +
+    '</tbody></table>' +
+    '<p style="margin-top:16px;font-size:16px"><b>Amount requested: '+fmtMoney(r.reimbursable)+'</b></p>' +
+    '<p style="font-size:12px;color:#444">Employee-retained (non-work): '+fmtMoney(r.retained)+'<br/>' +
+    'Prepared by Darcy (COS). Attach receipts + Usage screenshot. Not tax advice.</p>'
+  );
+}
+function buildInvoiceLines(r) {
+  const c = DATA.config;
+  const labels = c.share_labels;
+  const lines = [
+    'Expense reimbursement invoice',
+    'AI/dev productivity compute',
+    '',
+    'Invoice #: ' + invoiceId(r),
+    'Period: ' + r.start + ' to ' + r.end + ' (' + r.days + ' days)',
+    'From: ' + c.payee,
+    'Bill to: ' + c.billTo,
+    'Pay to: ' + c.payee,
+    '',
+    'Platforms'
+  ];
+  (c.platforms || []).forEach(p => {
+    lines.push('- ' + p.label + ': ' + fmtMoney(p.monthly) + '/mo' + (p.note ? ' (' + p.note + ')' : ''));
+  });
+  lines.push('');
+  lines.push('Allocation');
+  lines.push('- ' + labels.work + ': ' + (c.shares.work*100).toFixed(0) + '% = ' + fmtMoney(r.totals.work) + ' (expensible)');
+  lines.push('- ' + labels.personal + ': ' + (c.shares.personal*100).toFixed(0) + '% = ' + fmtMoney(r.totals.personal) + ' (no)');
+  lines.push('- ' + labels.medical + ': ' + (c.shares.medical*100).toFixed(0) + '% = ' + fmtMoney(r.totals.medical) + ' (no)');
+  lines.push('- Total gross: ' + fmtMoney(r.totals.gross));
+  lines.push('');
+  lines.push('Amount requested: ' + fmtMoney(r.reimbursable));
+  lines.push('Employee-retained (non-work): ' + fmtMoney(r.retained));
+  lines.push('');
+  lines.push('Prepared by Darcy (COS). Attach receipts + Usage screenshot. Not tax advice.');
+  return lines;
+}
+function pdfEscape(str) {
+  return String(str).replace(/\\/g, '\\\\').replace(/\(/g, '\\(').replace(/\)/g, '\\)');
+}
+function makePdfBlob(lines) {
+  const cmds = ['BT', '/F1 11 Tf', '48 760 Td', '14 TL'];
+  lines.forEach((line, idx) => {
+    const chunk = '(' + pdfEscape(line) + ') Tj';
+    cmds.push(idx === 0 ? chunk : ('T* ' + chunk));
+  });
+  cmds.push('ET');
+  const stream = cmds.join('\n');
+  const objects = [
+    '1 0 obj<< /Type /Catalog /Pages 2 0 R >>endobj\n',
+    '2 0 obj<< /Type /Pages /Kids [3 0 R] /Count 1 >>endobj\n',
+    '3 0 obj<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R /Resources<< /Font<< /F1 5 0 R >> >> >>endobj\n',
+    '4 0 obj<< /Length ' + stream.length + ' >>stream\n' + stream + '\nendstream\nendobj\n',
+    '5 0 obj<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>endobj\n'
+  ];
+  let pdf = '%PDF-1.4\n';
+  const offsets = [0];
+  for (const obj of objects) {
+    offsets.push(pdf.length);
+    pdf += obj;
+  }
+  const xref = pdf.length;
+  pdf += 'xref\n0 ' + (objects.length + 1) + '\n';
+  pdf += '0000000000 65535 f \n';
+  for (let i = 1; i < offsets.length; i++) {
+    pdf += String(offsets[i]).padStart(10, '0') + ' 00000 n \n';
+  }
+  pdf += 'trailer<< /Size ' + (objects.length + 1) + ' /Root 1 0 R >>\n';
+  pdf += 'startxref\n' + xref + '\n%%EOF';
+  return new Blob([new TextEncoder().encode(pdf)], { type: 'application/pdf' });
+}
+function downloadPdf(r) {
+  const blob = makePdfBlob(buildInvoiceLines(r));
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = invoiceId(r) + '.pdf';
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1500);
+}
+function printInvoice(r) {
+  const body = buildInvoiceHtml(r);
+  const html = '<!DOCTYPE html><html><head><meta charset="utf-8"/><title>' + invoiceId(r) + '</title>' +
+    '<style>@page{margin:16mm}body{font-family:ui-sans-serif,system-ui,sans-serif;color:#111;padding:8px}' +
+    'table{width:100%;border-collapse:collapse;font-size:12px}th,td{border-bottom:1px solid #ccc;padding:6px;text-align:left}' +
+    'h1{font-size:20px}h2{font-size:14px;margin-top:18px}</style></head><body>' + body + '</body></html>';
+  const iframe = document.createElement('iframe');
+  iframe.setAttribute('aria-hidden', 'true');
+  iframe.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;';
+  document.body.appendChild(iframe);
+  const doc = iframe.contentDocument || iframe.contentWindow.document;
+  doc.open();
+  doc.write(html);
+  doc.close();
+  const win = iframe.contentWindow;
+  const cleanup = () => { try { iframe.remove(); } catch (e) {} };
+  if (win) {
+    win.focus();
+    setTimeout(() => {
+      try { win.print(); } catch (e) {}
+      setTimeout(cleanup, 1000);
+    }, 150);
+  } else {
+    cleanup();
+  }
+}
+function generateInvoice() {
+  const r = updatePreview();
+  const sheet = document.getElementById('invoiceSheet');
+  sheet.innerHTML = buildInvoiceHtml(r);
+  sheet.setAttribute('aria-hidden', 'false');
+  downloadPdf(r);
+  printInvoice(r);
+}
+document.getElementById('startDate').addEventListener('change', updatePreview);
+document.getElementById('endDate').addEventListener('change', updatePreview);
+document.getElementById('btnReset').addEventListener('click', () => {
+  document.getElementById('startDate').value = DATA.defaults.start;
+  document.getElementById('endDate').value = DATA.defaults.end;
+  updatePreview();
+});
+document.getElementById('btnPdf').addEventListener('click', generateInvoice);
+updatePreview();
+
+</script>
+</body></html>
